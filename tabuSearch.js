@@ -1,76 +1,139 @@
+
+
+
 let randomNormal = require('random-normal');
 
+function compareMoves(move1, move2) {
+    return move1.internName && move2.internName && move1.internName === move2.internName &&
+        move1.hospitalName && move2.hospitalName && move1.hospitalName === move2.hospitalName;
+}
+function calculateStability(matching, hospitals) {
+    let stability = 0;
 
-function stablePairing(interns, hospitals) {
-    // Initialize all interns and hospitals as unmatched
-    let internMatches = {};
-    let hospitalMatches = {};
-    for (let intern of interns) {
-        internMatches[intern.name] = null;
-    }
-    for (let hospital of hospitals) {
-        hospitalMatches[hospital.name] = [];
-    }
-    // Initialize tabu list for intern-hospital pairs that have been recently matched
-    let tabuList = new Set();
-    let tabuThreshold = 5; // set the threshold for the size of the tabu list
+    for (let hospitalName in matching) {
+        let internName = matching[hospitalName];
+        let hospital = hospitals[hospitalName];
 
-    // While there are still unmatched interns
-    while (Object.values(internMatches).includes(null)) {
-        for (let intern of interns) {
-            // Skip matched interns
-            if (internMatches[intern.name] != null) {
-                continue;
-            }
+        if (!hospital || !internName || !hospital.preferences || !hospital.capacities) {
+            // Handle missing or undefined values
+            continue;
+        }
 
-            // Propose to highest ranked unmatched hospital that has not yet rejected them and has available spots
-            for (let hospitalName of intern.preferences) {
-                let hospital = hospitals.find(h => h.name === hospitalName);
-                // Check if intern-hospital pair is not in tabu list and if hospital has available spots
-                if (!tabuList.has(intern.name + "-" + hospitalName) && hospitalMatches[hospitalName].length < hospital.numberOfInterns) {
-                    hospitalMatches[hospitalName].push(intern.name);
-                    internMatches[intern.name] = hospitalName;
-                    // Add intern-hospital pair to tabu list
-                    tabuList.add(intern.name + "-" + hospitalName);
-                    // Remove oldest intern-hospital pair from tabu list if the size exceeds the threshold
-                    if(tabuList.size > tabuThreshold){
-                      let oldestPair = [...tabuList][0];
-                      tabuList.delete(oldestPair);
-                    }
-                    break;
-                }
-            }
+        let preferredInternName = hospital.preferences[hospital.capacities - 1];
 
-            // If intern is part of a couple, and their partner is also unmatched, consider partner for the same hospital
-            if (intern.partner != null && internMatches[intern.partner] == null) {
-                for (let hospitalName of intern.preferences) {
-                    let hospital = hospitals.find(h => h.name === hospitalName);
-                    if (!tabuList.has(intern.partner + "-" + hospitalName) && hospitalMatches[hospitalName].length < hospital.numberOfInterns) {
-                        hospitalMatches[hospitalName].push(intern.partner);
-                        internMatches[intern.partner] = hospitalName;
-                        tabuList.add(intern.partner + "-" + hospitalName);
-                        // Remove oldest intern-hospital pair from tabu list if the size exceeds the threshold
-                        if(tabuList.size > tabuThreshold){
-                          let oldestPair = [...tabuList][0];
-                          tabuList.delete(oldestPair);
-                        }
-                        break;
-                    }
-                }
+        if (internName === preferredInternName) {
+            stability++;
+        } else {
+            let intern = hospital.interns[internName];
+
+            if (intern.preferences.indexOf(preferredInternName) < matching[hospitalName].indexOf(internName)) {
+                stability++;
             }
         }
     }
 
-    // Check if a stable pairing was found
-    if (!Object.values(internMatches).includes(null)) {
-        console.log("A stable pairing was found.");
-    } else {
-        console.log("A stable pairing was not found.");
+    return stability;
+}
+
+function tabuSearch(interns, hospitals, maxIterations, tabuSize) {
+    // Initialize the random matching
+    let input = createRandomInput(interns.length, Math.floor(interns.length / 2), hospitals.length);
+    let initialMatching = input.matching;
+
+    // Initialize the tabu list and the best solution found so far
+    let tabuList = [];
+    let bestMatching = initialMatching;
+    let bestStability = calculateStability(bestMatching, hospitals);
+
+    // Start the search
+    let currentMatching = initialMatching;
+    let currentStability = bestStability;
+    let iteration = 0;
+    while (iteration < maxIterations) {
+        // Generate a list of candidate moves
+        let candidateMoves = generateCandidateMoves(currentMatching, hospitals);
+
+        // Filter out moves that violate tabu conditions
+        let tabuMoves = filterTabuMoves(candidateMoves, tabuList);
+
+        // Choose the best move
+        let bestMove = chooseBestMove(tabuMoves, currentMatching, hospitals);
+
+        // Update the current matching
+        currentMatching = applyMove(currentMatching, bestMove);
+
+        // Update the tabu list
+        tabuList.unshift(bestMove);
+        if (tabuList.length > tabuSize) {
+            tabuList.pop();
+        }
+
+        // Update the best solution found so far
+        let stability = calculateStability(currentMatching, hospitals);
+        if (stability > bestStability) {
+            bestMatching = currentMatching;
+            bestStability = stability;
+        }
+
+        // Increment the iteration counter
+        iteration++;
     }
 
-    // Output the results of the pairing
-    console.log("Intern matches:", internMatches);
-    console.log("Hospital matches:", hospitalMatches);
+    // Return the best solution found
+    return { matching: bestMatching, hospitals: hospitals, stability: bestStability };
+}
+
+function generateCandidateMoves(currentMatching, hospitals) {
+    let moves = [];
+    for (let hospital of hospitals) {
+        let interns = currentMatching[hospital.name];
+        for (let i = 0; i < interns.length; i++) {
+            for (let j = i + 1; j < interns.length; j++) {
+                let move = { hospitalName: hospital.name, internName1: interns[i], internName2: interns[j] };
+                moves.push(move);
+            }
+        }
+    }
+    return moves;
+}
+
+function filterTabuMoves(candidateMoves, tabuList) {
+    let tabuMoves = [];
+    for (let move of candidateMoves) {
+        if (!tabuList.some(m => compareMoves(m, move))) {
+            tabuMoves.push(move);
+        }
+    }
+    return tabuMoves;
+}
+
+function applyMove(currentMatching, move) {
+    if (!move || !move.hospitalName || !move.internName1 || !move.internName2) {
+        return currentMatching;
+    }
+    let hospital = currentMatching[move.hospitalName];
+    let intern1Index = hospital.indexOf(move.internName1);
+    let intern2Index = hospital.indexOf(move.internName2);
+    let newHospital = [...hospital];
+    newHospital[intern1Index] = move.internName2;
+    newHospital[intern2Index] = move.internName1;
+    let newMatching = { ...currentMatching };
+    newMatching[move.hospitalName] = newHospital;
+    return newMatching;
+}
+
+function chooseBestMove(tabuMoves, currentMatching, hospitals) {
+    let bestMove = null;
+    let bestStability = -1;
+    for (let move of tabuMoves) {
+        let matchingCopy = applyMove(currentMatching, move);
+        let stability = calculateStability(matchingCopy, hospitals);
+        if (stability > bestStability) {
+            bestMove = move;
+            bestStability = stability;
+        }
+    }
+    return bestMove;
 }
 
 function createRandomInput(numInterns, numCouples, numHospitals) {
@@ -84,11 +147,11 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
         for (let j = 0; j < numHospitals; j++) {
             preferences.push("Hospital " + String.fromCharCode(65 + j));
         }
-        if(i < numCouples*2){
-            if(i%2 == 0){
+        if (i < numCouples * 2) {
+            if (i % 2 == 0) {
                 partner = "Intern " + (i + 2);
                 partners.set(name, partner);
-                partners.set(partner,name);
+                partners.set(partner, name);
             }
         }
         preferences = shuffle(preferences);
@@ -99,8 +162,7 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
     let hospitals = [];
     for (let i = 0; i < numHospitals; i++) {
         let name = "Hospital " + String.fromCharCode(65 + i);
-        //let numberOfInterns = Math.max(Math.round(numInterns/numHospitals + Math.sqrt(numInterns/numHospitals)*Math.sqrt(-2*Math.log(Math.random()))*Math.cos(2*Math.PI*Math.random())), 0);
-        let numberOfInterns = Math.round(randomNormal({mean: numInterns/numHospitals, dev: numInterns/numHospitals/3}));
+        let numberOfInterns = Math.floor(Math.random() * numInterns);
         let preferences = [];
         for (let j = 0; j < numInterns; j++) {
             preferences.push("Intern " + (j + 1));
@@ -109,9 +171,30 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
         hospitals.push({ name: name, numberOfInterns: numberOfInterns, preferences: preferences });
     }
 
-    return { interns: interns, hospitals: hospitals };
-}
+    // Initialize a random matching
+    let matching = {};
+    let freeInterns = [];
+    for (let intern of interns) {
+        freeInterns.push(intern.name);
+    }
+    for (let hospital of hospitals) {
+        matching[hospital.name] = [];
+    }
+    while (freeInterns.length > 0) {
+        let internName = freeInterns.pop();
+        let intern = interns.find(i => i.name === internName);
+        for (let hospitalName of intern.preferences) {
+            let hospital = hospitals.find(h => h.name === hospitalName);
+            if (matching[hospitalName].length < hospital.numberOfInterns) {
+                matching[hospitalName].push(internName);
+                break;
+            }
+        }
+    }
 
+    return { interns: interns, hospitals: hospitals, matching: matching };
+
+}
 
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -120,7 +203,16 @@ function shuffle(array) {
     }
     return array;
 }
-let input = createRandomInput(100, 25, 20);
-stablePairing(input.interns, input.hospitals);
-console.log(input.interns);
-console.log(input.hospitals);
+
+let input = createRandomInput(10, 2, 1);
+console.log('input');
+console.log(input);
+
+let result = tabuSearch(input.interns, input.hospitals, 100, 10);
+console.log('result');
+console.log(result)
+
+// Output the results of the pairing
+console.log("Intern matches:", JSON.stringify(result.matching));
+console.log("Hospital matches:", result.hospitals);
+console.log("Stability score:", result.stability);
