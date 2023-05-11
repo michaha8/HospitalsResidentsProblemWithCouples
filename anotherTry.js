@@ -123,7 +123,8 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
         preferences = shuffle(preferences);
         hospitals.push({ name: name, numberOfInterns: numberOfInterns, preferences: preferences });
     }
-
+console.log(interns)
+console.log(hospitals)
     return { interns: interns, hospitals: hospitals };
 }
 

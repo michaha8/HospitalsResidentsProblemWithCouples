@@ -207,8 +207,7 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
   }
   
 
-  let input = createRandomInput(50, 20, 17); // Generate preferences for three hospitals
-//   console.log('input');
+  let input = createRandomInput(100, 25, 20); 
 //   console.log(input);
 // for (let intern of input.interns) {
 //     console.log(`Intern ${intern.name} ${intern.preferences}\n`);
