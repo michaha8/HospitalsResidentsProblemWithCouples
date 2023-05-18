@@ -3,6 +3,69 @@ const XLSX = require('xlsx');
 
 //Algorithm 1 Stable Paring
 
+  
+  
+  
+
+// function stablePairing(interns, hospitals) {
+//     console.log('Here 1');
+//     // Initialize all interns and hospitals as unmatched
+//     let internMatches = {};
+//     let hospitalMatches = {};
+//     for (let intern of interns) {
+//         internMatches[intern.name] = null;
+//     }
+//     for (let hospital of hospitals) {
+//         hospitalMatches[hospital.name] = [];
+//     }
+//     console.log('Here 2');
+//     // While there are still unmatched interns
+//     while (Object.values(internMatches).includes(null)) {
+//         console.log('Here 3');
+//         for (let intern of interns) {
+//             // Skip matched interns
+//             if (internMatches[intern.name] != null) {
+//                 console.log('Here 4');
+//                 continue;
+                
+//             }
+
+//             // Propose to highest ranked unmatched hospital that has not yet rejected them and has available spots
+//             for (let hospitalName of intern.preferences) {
+//                 console.log('Here 5');
+//                 let hospital = hospitals.find(h => h.name === hospitalName);
+//                 if (hospitalMatches[hospitalName].length < hospital.numberOfInterns) {
+//                     hospitalMatches[hospitalName].push(intern.name);
+//                     internMatches[intern.name] = hospitalName;
+//                     break;
+//                 }
+//             }
+
+//             // If intern is part of a couple, and their partner is also unmatched, consider partner for the same hospital
+//             if (intern.partner != null && internMatches[intern.partner] == null) {
+//                 console.log('Here 6');
+//                 for (let hospitalName of intern.preferences) {
+//                     let hospital = hospitals.find(h => h.name === hospitalName);
+//                     if (hospitalMatches[hospitalName].length < hospital.numberOfInterns) {
+//                         hospitalMatches[hospitalName].push(intern.partner);
+//                         internMatches[intern.partner] = hospitalName;
+//                         break;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     // Check if a stable pairing was found
+//     if (!Object.values(internMatches).includes(null)) {
+//         console.log("A stable pairing was found.");
+//     } else {
+//         console.log("A stable pairing was not found.");
+//     }
+
+//     return { matching: hospitalMatches};
+    
+// }
 function stablePairing(interns, hospitals) {
     // Initialize all interns and hospitals as unmatched
     let internMatches = {};
@@ -14,8 +77,18 @@ function stablePairing(interns, hospitals) {
         hospitalMatches[hospital.name] = [];
     }
 
-    // While there are still unmatched interns
-    while (Object.values(internMatches).includes(null)) {
+    // Function to check if all hospitals are full
+    function areAllHospitalsFull() {
+        for (let hospital of hospitals) {
+            if (hospitalMatches[hospital.name].length < hospital.numberOfInterns) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // While there are still unmatched interns and not all hospitals are full
+    while (Object.values(internMatches).includes(null) && !areAllHospitalsFull()) {
         for (let intern of interns) {
             // Skip matched interns
             if (internMatches[intern.name] != null) {
@@ -50,65 +123,11 @@ function stablePairing(interns, hospitals) {
     if (!Object.values(internMatches).includes(null)) {
         console.log("A stable pairing was found.");
     } else {
-        console.log("A stable pairing was not found.");
+        console.log("A stable pairing was not found. Some interns couldn't be matched to any hospital.");
     }
 
-    return { matching: hospitalMatches};
-    // Output the results of the pairing
-    console.log("Intern matches:", internMatches);
-    console.log("Hospital matches:", hospitalMatches);
+    return { matching: hospitalMatches };
 }
-
-// function createRandomInputSM(numInterns, numCouples, numHospitals) {
-//     // Create list of interns
-//     let interns = [];
-//     let partners = new Map();
-//     for (let i = 0; i < numInterns; i++) {
-//         let name = "Intern " + (i + 1);
-//         let partner = null;
-//         let preferences = [];
-//         for (let j = 0; j < numHospitals; j++) {
-//             preferences.push("Hospital " + String.fromCharCode(65 + j));
-//         }
-//         if(i < numCouples*2){
-//             if(i%2 == 0){
-//                 partner = "Intern " + (i + 2);
-//                 partners.set(name, partner);
-//                 partners.set(partner,name);
-//             }
-//         }
-//         preferences = shuffle(preferences);
-//         interns.push({ name: name, partner: partners.get(name), preferences: preferences });
-//     }
-
-//     // Create list of hospitals
-//     let hospitals = [];
-//     for (let i = 0; i < numHospitals; i++) {
-//         let name = "Hospital " + String.fromCharCode(65 + i);
-//         // let numberOfInterns = Math.max(Math.min(Math.floor(Math.random() * numInterns), numInterns),1);
-//         let numberOfInterns = 5;
-//         let preferences = [];
-//         for (let j = 0; j < numInterns; j++) {
-//             preferences.push("Intern " + (j + 1));
-//         }
-//         preferences = shuffle(preferences);
-//         hospitals.push({ name: name, numberOfInterns: numberOfInterns, preferences: preferences });
-//     }
-//     console.log("-----The input SM-------");
-// console.log(interns)
-// console.log(hospitals)
-//     return { interns: interns, hospitals: hospitals };
-// }
-
-
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
 
 //Algorithm 2 TabuSearch
 
@@ -246,67 +265,6 @@ function chooseBestMove(tabuMoves, currentMatching, hospitals) {
     }
     return bestMove;
 }
-
-// function createRandomInput(numInterns, numCouples, numHospitals) {
-//     // Create list of interns
-//     let interns = [];
-//     let partners = new Map();
-//     for (let i = 0; i < numInterns; i++) {
-//       let name = "Intern " + (i + 1);
-//       let partner = null;
-//       let preferences = [];
-//       for (let j = 0; j < numHospitals; j++) {
-//         preferences.push("Hospital " + String.fromCharCode(65 + j));
-//       }
-//       if (i < numCouples * 2) {
-//         if (i % 2 == 0) {
-//           partner = "Intern " + (i + 2);
-//           partners.set(name, partner);
-//           partners.set(partner, name);
-//         }
-//       }
-//       shuffle(preferences); // Shuffle the preferences array
-//       interns.push({ name: name, partner: partners.get(name), preferences: preferences });
-//     }
-  
-//     // Create list of hospitals
-//     let hospitals = [];
-//     for (let i = 0; i < numHospitals; i++) {
-//       let name = "Hospital " + String.fromCharCode(65 + i);
-//     //   let numberOfInterns = Math.floor(Math.random() * numInterns)+2;
-//     let numberOfInterns = 5;
-//       let preferences = [];
-//       for (let j = 0; j < numInterns; j++) {
-//         preferences.push("Intern " + (j + 1));
-//       }
-//       shuffle(preferences); // Shuffle the preferences array
-//       hospitals.push({ name: name, numberOfInterns: numberOfInterns, preferences: preferences });
-//     }
-  
-//     // Initialize a random matching
-//     let matching = {};
-//     let freeInterns = [];
-//     for (let intern of interns) {
-//       freeInterns.push(intern.name);
-//     }
-//     for (let hospital of hospitals) {
-//       matching[hospital.name] = [];
-//     }
-//     while (freeInterns.length > 0) {
-//       let internName = freeInterns.pop();
-//       let intern = interns.find(i => i.name === internName);
-//       for (let hospitalName of intern.preferences) {
-//         let hospital = hospitals.find(h => h.name === hospitalName);
-//         if (matching[hospitalName].length < hospital.numberOfInterns) {
-//           matching[hospitalName].push(internName);
-//           break;
-//         }
-//       }
-//     }
-  
-//     console.log(`Random Matching TS ` ,matching);
-//     return { interns: interns, hospitals: hospitals, matching: matching };
-//   }
   
   function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -379,28 +337,32 @@ function createRandomInput(numInterns, numCouples, numHospitals) {
     return matching;
   }
   
-let input = createRandomInput(100, 25, 20); 
-let matching = generateRandomPairing(input.interns, input.hospitals);
-
 const maxIterations=100;
 const tabuSize=10
-console.log("-----The input Tabu Search-------");
-let result1 = tabuSearch(input.interns, input.hospitals,matching, maxIterations, tabuSize);
-let result2=stablePairing(input.interns,input.hospitals)
-console.log(`Result of TabuSearch with maxIter ${maxIterations} and TabuSize ${tabuSize} `);
-console.log(result1.matching);
-console.log("-----The input Stabel Pairing-------");
-console.log(result2.matching);
-
 
 function countBlocks(matching, hospitals, interns) {
     let count = 0;
+    for (let intern of interns) {
+        let assigned = false;
+    
+        for (let hospitalName in matching) {
+          if (matching[hospitalName].includes(intern.name)) {
+            assigned = true;
+            break;
+          }
+        }
+    
+        if (!assigned) {
+         count++
+        }
+      }
     for (let hospitalName in matching) {
         let currentHospital = hospitals.find(h => h.name === hospitalName);
         if (!currentHospital) {
             console.warn(`Warning: ${hospitalName} not found in hospitals array.`);
             continue;
         }
+       
 
         for (let internName of matching[hospitalName]) {
             let currentIntern = interns.find(i => i.name === internName);
@@ -423,84 +385,12 @@ function countBlocks(matching, hospitals, interns) {
             }
         }
     }
+   
     return count;
 }
 
-  
-
-
-
-console.log("Number of Blocks Tabu Search:", countBlocks(result1.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
-
-console.log("Number of Blocks Stable Pairing:", countBlocks(result2.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
-
-
-
 
 // New code to save data...
-
-
-
-
-// function saveDataToExcel(input, result1, result2, filename) {
-//     let interns = input.interns.map(intern => ({
-//         ...intern,
-//         preferences: intern.preferences.join(', ')
-//     }));
-
-//     let hospitals = input.hospitals.map(hospital => ({
-//         ...hospital,
-//         preferences: hospital.preferences.join(', ')
-//     }));
-
-//     let result1ToSend = Object.entries(result1.matching).map(([hospital, interns]) => ({
-//         Algorithm: 'Tabu Search',
-//         Hospital: hospital,
-//         Interns: Array.isArray(interns) ? interns.join(', ') : interns
-//     }));
-
-//     let result2ToSend = Object.entries(result2.matching).map(([hospital, interns]) => ({
-//         Algorithm: 'Stable Pairing',
-//         Hospital: hospital,
-//         Interns: Array.isArray(interns) ? interns.join(', ') : interns
-//     }));
-
-//     let blocks1 = [{
-//         Algorithm: 'Tabu Search',
-//         Blocks: countBlocks(result1.matching, input.hospitals, input.interns)
-//     }];
-
-//     let blocks2 = [{
-//         Algorithm: 'Stable Pairing',
-//         Blocks: countBlocks(result2.matching, input.hospitals, input.interns)
-//     }];
-
-//     var workbook = XLSX.utils.book_new();
-
-//     var internWorksheet = XLSX.utils.json_to_sheet(interns);
-//     XLSX.utils.book_append_sheet(workbook, internWorksheet, "Interns");
-
-//     var hospitalWorksheet = XLSX.utils.json_to_sheet(hospitals);
-//     XLSX.utils.book_append_sheet(workbook, hospitalWorksheet, "Hospitals");
-
-//     var result1Worksheet = XLSX.utils.json_to_sheet(result1ToSend);
-//     XLSX.utils.book_append_sheet(workbook, result1Worksheet, "Result 1 - Tabu Search");
-
-//     var blocks1Worksheet = XLSX.utils.json_to_sheet(blocks1);
-//     XLSX.utils.book_append_sheet(workbook, blocks1Worksheet, "Blocks 1 - Tabu Search");
-
-//     var result2Worksheet = XLSX.utils.json_to_sheet(result2ToSend);
-//     XLSX.utils.book_append_sheet(workbook, result2Worksheet, "Result 2 - Stable Pairing");
-
-//     var blocks2Worksheet = XLSX.utils.json_to_sheet(blocks2);
-//     XLSX.utils.book_append_sheet(workbook, blocks2Worksheet, "Blocks 2 - Stable Pairing");
-
-//     XLSX.writeFile(workbook, filename);
-// }
-
-// // Save the data to an Excel file
-// saveDataToExcel(input, result1, result2, 'C:/Users/michael harush/Desktop/data.xlsx');
-
 
 function getInput(){
    return createRandomInput(100,25,20)
@@ -512,7 +402,11 @@ function runAlgorithms(iterations, filename) {
         let input = getInput();  // Fetch the specific input for this iteration
         let Matching=generateRandomPairing(input.interns, input.hospitals);
         let result1 = tabuSearch(input.interns, input.hospitals,Matching, maxIterations, tabuSize);
+        console.log(`-----The input Tabu Search Number ${i}-------`);
+        // console.log(result1);
         let result2 = stablePairing(input.interns,input.hospitals)
+        console.log(`-----The input Stabel Pairing Number ${i}-------`);
+        // console.log(result2);
 
         results.push({
             Try: i + 1,
@@ -525,6 +419,10 @@ function runAlgorithms(iterations, filename) {
             Algorithm: 'Stable Pairing',
             Blocks: countBlocks(result2.matching, input.hospitals, input.interns)
         });
+        console.log("Number of Blocks Tabu Search:", countBlocks(result1.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
+
+        console.log("Number of Blocks Stable Pairing:", countBlocks(result2.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
+
     }
 
     var workbook;
@@ -540,7 +438,19 @@ function runAlgorithms(iterations, filename) {
     XLSX.writeFile(workbook, filename);
 }
 
-runAlgorithms(100, 'C:/Users/michael harush/Desktop/Compare100TimesTabuSize10MaxIter100ForEachHospital5Interns.xlsx');
+runAlgorithms(100, 'C:/Users/michael harush/Desktop/numberOfInterns5.xlsx');
 
 
+ // Fetch the specific input for this iteration
+// let Matching=generateRandomPairing(input.interns, input.hospitals);
+// let result1 = tabuSearch(input.interns, input.hospitals,Matching, maxIterations, tabuSize);
+// // console.log(`-----The input Tabu Search Number -------`);
+// // console.log(result1);
+// // console.log("Number of Blocks Tabu Search:", countBlocks(result1.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
+// let input = getInput(); 
+// console.log('FINISH');
+// let result2 = stablePairing(input.interns,input.hospitals)
+// console.log(`-----The input Stabel Pairing Number -------`);
+// console.log(result2);
 
+// console.log("Number of Blocks Stable Pairing:", countBlocks(result2.matching, input.hospitals, input.interns));  // should print Number of Blocks: 1
